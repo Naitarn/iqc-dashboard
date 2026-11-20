@@ -114,7 +114,6 @@ td.dt{white-space:nowrap;font-variant-numeric:tabular-nums}
 <section id="overview">
   <h2>ภาพรวม</h2>
   <div class="summary" id="summary"></div>
-  <div class="kpis" id="kpis"></div>
 </section>
 
 <section id="instruments">
@@ -213,10 +212,6 @@ function render(){
   // overview box: each instrument's status on the latest recorded day
   $("summary").innerHTML=dayStatus(fm,fr,fi);
 
-  $("kpis").innerHTML=
-   `<div class="kpi ${cls(n?p:null)}"><div class="big" style="color:var(--st)">${n?p.toFixed(1)+"%":"–"}</div><div class="lb">อัตราผ่าน QC (${n-f} จาก ${n} รอบเครื่อง)</div></div>`+
-   `<div class="kpi"><div class="big">${f}</div><div class="lb">รอบเครื่องที่ไม่ผ่าน</div></div>`+
-   `<div class="kpi"><div class="big">${ee.length}</div><div class="lb">รายการ/level ที่ไม่ผ่าน (นับทุก analyte)</div></div>`;
 
   // instrument cards
   $("instCards").innerHTML=INST.map(i=>{
