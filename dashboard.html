@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: header → sticky filters → summary sentence + 3 KPIs → instrument status cards (click to filter) → monthly trend → causes → event table */
+:root{--bg:#f3f6f7;--card:#fff;--fg:#13232a;--mut:#5b6e77;--line:#dbe3e7;--acc:#0e7490;--accbg:#e3f2f6;--track:#e7edf0;
+--ok:#15803d;--okbg:#e5f4ea;--warn:#b45309;--warnbg:#fdf1dc;--bad:#c2410c;--badbg:#fde9df;
+--f-body:"IBM Plex Sans Thai",system-ui,sans-serif;--f-num:"IBM Plex Mono",ui-monospace,monospace}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d161b;--card:#15232a;--fg:#e5eef2;--mut:#93a7b1;--line:#26373e;--acc:#38bdd8;--accbg:#163640;--track:#22333a;--ok:#4ade80;--okbg:#14301e;--warn:#fbbf24;--warnbg:#3a2c10;--bad:#fb923c;--badbg:#3b2216;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d161b;--card:#15232a;--fg:#e5eef2;--mut:#93a7b1;--line:#26373e;--acc:#38bdd8;--accbg:#163640;--track:#22333a;--ok:#4ade80;--okbg:#14301e;--warn:#fbbf24;--warnbg:#3a2c10;--bad:#fb923c;--badbg:#3b2216;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--f-body);padding-block:0 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+header{padding-top:22px;display:flex;flex-wrap:wrap;gap:8px 20px;align-items:flex-end;justify-content:space-between}
+h1{font-size:24px;margin:0;font-weight:600;text-wrap:balance}
+.sub{color:var(--mut);font-size:13px}
+.filters{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding:10px 0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
+.fl{font-size:12px;color:var(--mut);display:flex;flex-direction:column;gap:4px}
+select{font:inherit;font-size:14px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg);min-width:140px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--card)}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line)}.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--acc);color:#fff}
+button{font:inherit;font-size:14px;padding:6px 12px;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.active-f{font-size:13px;color:var(--acc);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+section{display:flex;flex-direction:column;gap:12px}
+h2{font-size:17px;margin:0;font-weight:600}
+.hint{color:var(--mut);font-size:13px;margin:-8px 0 0}
+.summary{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;font-size:15px}
+.summary b{font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media(max-width:640px){.kpis{grid-template-columns:minmax(0,1fr)}}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
+.kpi .big{font:600 32px/1.15 var(--f-num);font-variant-numeric:tabular-nums}
+.kpi .lb{font-size:13px;color:var(--mut)}
+.inst{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.ic{text-align:left;background:var(--card);border:1px solid var(--line);border-left:5px solid var(--st);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;cursor:pointer;color:var(--fg)}
+.ic.sel{box-shadow:0 0 0 2px var(--acc)}
+.ic .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ic .nm{font-weight:600;font-size:15px}
+.pill{font-size:12px;padding:1px 9px;border-radius:99px;background:var(--stbg);color:var(--st);white-space:nowrap;font-weight:500}
+.ic .pct{font:600 26px/1 var(--f-num);color:var(--st)}
+.meter{height:8px;background:var(--track);border-radius:4px;overflow:hidden}.meter i{display:block;height:100%;background:var(--st)}
+.ic .d{font-size:13px;color:var(--mut)}
+.ic .top3{margin:0;padding-left:20px;font-size:13px;display:flex;flex-direction:column;gap:2px}
+.ic .top3 li{padding-left:2px}
+.ic .top3 li span{display:inline-block;min-width:0;max-width:75%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
+.ic .top3 li b{float:right;font:500 12px var(--f-num);color:var(--mut)}
+.s-ok{--st:var(--ok);--stbg:var(--okbg)}.s-warn{--st:var(--warn);--stbg:var(--warnbg)}.s-bad{--st:var(--bad);--stbg:var(--badbg)}.s-na{--st:var(--mut);--stbg:var(--track)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0}
+.cols{display:flex;align-items:flex-end;gap:6px;height:210px}
+.col{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
+.col .bar{width:100%;max-width:52px;border-radius:4px 4px 0 0;background:var(--st);min-height:2px}
+.col .val{font:500 12px var(--f-num);color:var(--st)}
+.col .t{font-size:12px;color:var(--mut);white-space:nowrap}
+.col .c{font-size:11px;color:var(--mut)}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media(max-width:900px){.three{grid-template-columns:minmax(0,1fr)}}
+.card h3{font-size:14px;margin:0 0 10px;font-weight:600}
+.row{display:grid;grid-template-columns:minmax(80px,42%) 1fr 40px;gap:8px;align-items:center;margin:6px 0;font-size:13px}
+.row .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.track{background:var(--track);border-radius:3px;height:12px;overflow:hidden}.fill{height:100%;background:var(--acc);border-radius:3px;min-width:2px}
+.row .v{text-align:right;font:500 12px var(--f-num);font-variant-numeric:tabular-nums}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:760px}
+th{text-align:left;font-size:12px;color:var(--mut);font-weight:500;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+td.dt{white-space:nowrap;font-variant-numeric:tabular-nums}
+.chip{display:inline-block;padding:0 8px;border-radius:99px;font-size:12px;background:var(--badbg);color:var(--bad);margin:0 4px 2px 0;white-space:nowrap}
+.empty{color:var(--mut);padding:10px 0}
+.more{margin-top:10px}
+.dq{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--st);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.dq .hd{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.dq .hd b{font-size:15px}
+.dq ul{margin:0;padding-left:20px;font-size:13px}
+.dq details{font-size:13px}.dq summary{cursor:pointer;color:var(--acc)}
+.dq .stats{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--mut)}
+.dq .stats b{color:var(--fg);font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mut)}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--st);margin-right:5px;vertical-align:-1px}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+<header>
+  <div><h1>Internal Quality Control (IQC)</h1><div class="sub" id="range"></div></div>
+  <button id="theme" type="button">สลับโหมดมืด/สว่าง</button>
+</header>
+
+<div class="filters" id="filters">
+  <label class="fl">เดือน<select id="fMonth"></select></label>
+  <div class="fl">รอบ<div class="seg" id="fRound"><button type="button" data-v="" aria-pressed="true">ทั้งหมด</button><button type="button" data-v="M" aria-pressed="false">เช้า</button><button type="button" data-v="A" aria-pressed="false">บ่าย</button></div></div>
+  <label class="fl">เครื่อง<select id="fInst"></select></label>
+  <button type="button" id="reset">ล้างตัวกรอง</button>
+</div>
+
+<section id="dq">
+  <div class="dq" id="dqBox"></div>
+</section>
+
+<section id="overview">
+  <h2>ภาพรวม</h2>
+  <div class="summary" id="summary"></div>
+  <div class="kpis" id="kpis"></div>
+</section>
+
+<section id="instruments">
+  <h2>สถานะรายเครื่อง</h2>
+  <p class="hint">% = อัตราผ่าน QC (วันที่ไม่มีบันทึกนับเป็นผ่าน) · ใต้ตัวเลขคือรายการที่ไม่ผ่านบ่อย 3 อันดับ (จำนวนครั้ง) · กดที่การ์ดเพื่อดูเฉพาะเครื่องนั้น</p>
+  <div class="legend"><span class="s-ok">ดี ≥ 95%</span><span class="s-warn">เฝ้าระวัง 85–94%</span><span class="s-bad">ต้องแก้ไข &lt; 85%</span></div>
+  <div class="inst" id="instCards"></div>
+</section>
+
+<section id="trend">
+  <h2>อัตราผ่านรายเดือน</h2>
+  <p class="hint" id="trendHint"></p>
+  <div class="card"><div class="cols" id="cMonth"></div></div>
+</section>
+
+<section id="causes">
+  <h2>สาเหตุที่ไม่ผ่าน</h2>
+  <div class="three">
+    <div class="card" id="cardItem"><h3>รายการที่ไม่ผ่านบ่อย</h3><div id="cItem"></div></div>
+    <div class="card" id="cardRule"><h3>Westgard rule ที่ละเมิด</h3><div id="cRule"></div></div>
+    <div class="card" id="cardErr"><h3>ประเภทความคลาดเคลื่อน</h3><div id="cErr"></div><h3 style="margin-top:18px">การแก้ไขที่ใช้บ่อย</h3><div id="cAct"></div></div>
+  </div>
+</section>
+
+<section id="events">
+  <h2>รายการไม่ผ่านล่าสุด</h2>
+  <div class="card"><div class="tw"><table><thead><tr><th>วันที่</th><th>รอบ</th><th>เครื่อง</th><th>รายการ</th><th>Rule</th><th>Error</th><th>การแก้ไข</th></tr></thead><tbody id="tbody"></tbody></table></div>
+  <button type="button" class="more" id="more">แสดงเพิ่ม</button></div>
+</section>
+
+<p class="sub">ที่มา: Google Form "Internal Quality Control (IQC)" · XN-550, CA-500, UC-1000 และ VISION Pro A บันทึกเฉพาะรอบเช้า · ชื่อรายการและ Error type ตามที่กรอกในฟอร์ม · เกณฑ์สี (95% / 85%) เป็นค่าตั้งต้น ปรับได้</p>
+</div>
+
+<script>
+const DATA=/*IQC_DATA*/null;
+const runs=DATA.runs, ev=DATA.ev;
+const INST=["CI4100 Immunology","CI4100 Chemistry","Architect C4000","CA-500 (Coag)","UC-1000 (UA)","VISION Pro A (ESR)","XN-550 (CBC)"];
+const MN=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const $=id=>document.getElementById(id);
+const mlabel=m=>MN[+m.slice(5)-1]+" "+(+m.slice(0,4)+543-2500);
+const months=[...new Set(runs.map(r=>r.d.slice(0,7)))].sort();
+const st={round:"",limit:15};
+$("fMonth").innerHTML='<option value="">ทุกเดือน</option>'+months.map(m=>`<option value="${m}">${mlabel(m)}</option>`).join("");
+$("fInst").innerHTML='<option value="">ทุกเครื่อง</option>'+INST.map(i=>`<option>${i}</option>`).join("");
+const ds=runs.map(r=>r.d).sort();
+const thd=d=>{const[y,m,dd]=d.split("-");return `${+dd} ${MN[+m-1]} ${+y+543}`};
+$("range").textContent=`ข้อมูล ${thd(ds[0])} – ${thd(ds[ds.length-1])} · ${runs.filter(r=>!r.x).length} รายการบันทึก`;
+const cls=p=>p==null?"s-na":p>=95?"s-ok":p>=85?"s-warn":"s-bad";
+const lbl=p=>p>=95?"ดี":p>=85?"เฝ้าระวัง":"ต้องแก้ไข";
+function errNorm(e){e=(e||"").trim();if(!e)return"ไม่ระบุ";if(/systemic/i.test(e))return"Systematic error";if(/random/i.test(e))return"Random error";if(/wash/i.test(e))return"ไม่ได้ใส่ wash buffer";if(/human/i.test(e))return"Human error";if(/lot/i.test(e))return"คนละ Lot";return"อื่น ๆ"}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function count(list,keyfn){const m={};list.forEach(x=>{const ks=keyfn(x);(Array.isArray(ks)?ks:[ks]).forEach(k=>{if(k)m[k]=(m[k]||0)+1})});return Object.entries(m).sort((a,b)=>b[1]-a[1])}
+function bars(el,items){
+  if(!items.length){el.innerHTML='<div class="empty">ไม่มีรายการไม่ผ่าน</div>';return}
+  const mx=items[0][1];
+  el.innerHTML=items.map(([n,v])=>`<div class="row" title="${esc(n)}: ${v} ครั้ง"><div class="n">${esc(n)}</div><div class="track"><div class="fill" style="width:${v/mx*100}%"></div></div><div class="v">${v}</div></div>`).join("");
+}
+function stats(rr,insts){const s={};insts.forEach(i=>s[i]={n:0,f:0});rr.forEach(r=>{for(const k in r.s){if(s[k]){s[k].n++;if(r.s[k]===0)s[k].f++}}});return s}
+const pct=o=>o.n?(1-o.f/o.n)*100:null;
+
+function renderDQ(){
+  const m=DATA.meta;if(!m)return;
+  const rl=r=>r==="M"?"เช้า":"บ่าย";
+  const issues=[];
+  (m.structure||[]).forEach(s=>issues.push(s));
+  if(m.parsed!==m.sheetRows)issues.push(`นำเข้าได้ ${m.parsed} จาก ${m.sheetRows} แถวใน Sheet`);
+  (m.unparsed||[]).forEach(s=>issues.push(s));
+  if((m.missing||[]).length)issues.push(`แถวเดิม ${m.missing.length} แถวหายไปจาก Sheet: `+m.missing.slice(0,10).map(x=>`${thd(x.d)} ${rl(x.r)}`).join(", "));
+  const notes=[];
+  if((m.lateNew||[]).length)notes.push(`มีข้อมูลย้อนหลังเข้ามาใหม่ ${m.lateNew.length} แถว (นำเข้าแล้ว): `+m.lateNew.slice(0,10).map(x=>`${thd(x.d)} ${rl(x.r)}`).join(", "));
+  if((m.changed||[]).length)notes.push(`แถวเดิม ${m.changed.length} แถวถูกแก้ไขใน Sheet (ใช้ค่าล่าสุดแล้ว): `+m.changed.slice(0,10).map(x=>`${thd(x.d)} ${rl(x.r)}`).join(", "));
+  if((m.dups||[]).length)notes.push(`บันทึกซ้ำวันและรอบเดียวกัน ${m.dups.length} ครั้ง: `+m.dups.slice(0,10).map(x=>`${thd(x.d)} ${rl(x.r)} (${x.n} ครั้ง)`).join(", "));
+  const nr=m.noRecord||[];
+  const c=issues.length?"s-bad":notes.length?"s-warn":"s-ok";
+  const head=issues.length?"ข้อมูลไม่ครบ ต้องตรวจสอบ":notes.length?"ข้อมูลครบ มีข้อสังเกต":"ข้อมูลครบถ้วน";
+  const box=$("dqBox");box.className="dq "+c;
+  box.innerHTML=`<div class="hd"><span class="pill">${head}</span><b>ตรวจความครบถ้วนของข้อมูล</b></div>
+   <div class="stats"><span>อัปเดตล่าสุด <b>${esc(m.updated)}</b></span><span>แถวใน Sheet <b>${m.sheetRows}</b></span><span>นำเข้าแดชบอร์ด <b>${m.parsed}</b></span>${m.firstRun?"<span>อัปเดตครั้งแรก ยังไม่มีรอบก่อนให้เทียบ</span>":`<span>แถวใหม่จากรอบก่อน <b>${m.newRows}</b></span>`}</div>
+   ${issues.length?`<ul>${issues.map(s=>`<li>${esc(s)}</li>`).join("")}</ul>`:""}
+   ${notes.length?`<ul>${notes.map(s=>`<li>${esc(s)}</li>`).join("")}</ul>`:""}
+   ${nr.length?`<details><summary>วันที่ไม่มีบันทึก QC ${nr.length} วัน (นับเป็นผ่านทุกเครื่อง)</summary><p>${nr.map(thd).join(", ")}</p></details>`:""}`;
+}
+renderDQ();
+function render(){
+  const fm=$("fMonth").value,fr=st.round,fi=$("fInst").value;
+  const insts=fi?[fi]:INST;
+  const rAll=runs.filter(r=>!fr||r.r===fr);
+  const rr=rAll.filter(r=>!fm||r.d.startsWith(fm));
+  const ee=ev.filter(e=>(!fm||e.d.startsWith(fm))&&(!fr||e.r===fr)&&(!fi||e.i===fi));
+  const S=stats(rr,INST);
+  const n=insts.reduce((a,i)=>a+S[i].n,0),f=insts.reduce((a,i)=>a+S[i].f,0),p=n?(1-f/n)*100:0;
+
+  // summary sentence
+  const ranked=INST.filter(i=>S[i].n).map(i=>[i,pct(S[i])]).sort((a,b)=>a[1]-b[1]);
+  const watch=ranked.filter(x=>x[1]<85);
+  const topItem=count(ee,e=>e.t)[0];
+  const scope=(fm?mlabel(fm):"ทั้งช่วงข้อมูล")+(fr?(fr==="M"?" (รอบเช้า)":" (รอบบ่าย)"):"");
+  let s=`<b>${scope}</b>: QC ผ่านทุก level <b>${p.toFixed(1)}%</b> ของรอบเครื่องทั้งหมด`;
+  if(!fi){s+= watch.length?` · เครื่องที่ต้องแก้ไข: ${watch.map(([i,v])=>`<b>${esc(i)}</b> (${v.toFixed(0)}%)`).join(", ")}`:" · ไม่มีเครื่องที่ต่ำกว่า 85%";}
+  if(topItem) s+=` · รายการที่ไม่ผ่านบ่อยที่สุดคือ <b>${esc(topItem[0])}</b> (${topItem[1]} ครั้ง)`;
+  $("summary").innerHTML=s;
+
+  $("kpis").innerHTML=
+   `<div class="kpi ${cls(n?p:null)}"><div class="big" style="color:var(--st)">${n?p.toFixed(1)+"%":"–"}</div><div class="lb">อัตราผ่าน QC (${n-f} จาก ${n} รอบเครื่อง)</div></div>`+
+   `<div class="kpi"><div class="big">${f}</div><div class="lb">รอบเครื่องที่ไม่ผ่าน</div></div>`+
+   `<div class="kpi"><div class="big">${ee.length}</div><div class="lb">รายการ/level ที่ไม่ผ่าน (นับทุก analyte)</div></div>`;
+
+  // instrument cards
+  $("instCards").innerHTML=INST.map(i=>{
+    const o=S[i],v=pct(o),c=cls(v);
+    const top3=count(ee.filter(e=>e.i===i),e=>e.t).slice(0,3);
+    return `<button type="button" class="ic ${c} ${fi===i?"sel":""}" data-i="${esc(i)}" aria-pressed="${fi===i}">
+      <div class="top"><span class="nm">${esc(i)}</span><span class="pct">${v==null?"–":v.toFixed(1)+"%"}</span></div>
+      ${top3.length?`<ol class="top3">${top3.map(([k,n])=>`<li><span>${esc(k)}</span><b>${n}</b></li>`).join("")}</ol>`:'<div class="d">ไม่มีรายการไม่ผ่าน</div>'}</button>`}).join("");
+  $("instCards").querySelectorAll(".ic").forEach(b=>b.onclick=()=>{$("fInst").value=($("fInst").value===b.dataset.i?"":b.dataset.i);render()});
+
+  // monthly pass rate (ignores month filter so the trend stays visible)
+  $("trendHint").textContent=(fi?fi:"ทุกเครื่องรวมกัน")+" · ความสูงแท่งเริ่มที่ 50% · ตัวเลขล่าง =จำนวนรอบที่ไม่ผ่าน/ทั้งหมด"+(fm?" · เดือนที่เลือกเน้นไว้":"");
+  $("cMonth").innerHTML=months.map(m=>{
+    const Sm=stats(rAll.filter(r=>r.d.startsWith(m)),insts);
+    const nn=insts.reduce((a,i)=>a+Sm[i].n,0),ff=insts.reduce((a,i)=>a+Sm[i].f,0);
+    const v=nn?(1-ff/nn)*100:null;
+    const h=v==null?0:Math.max(4,(v-50)/50*150);
+    return `<div class="col ${cls(v)}" style="${fm&&fm!==m?"opacity:.4":""}" title="${mlabel(m)}: ผ่าน ${v==null?"-":v.toFixed(1)+"%"} (ไม่ผ่าน ${ff}/${nn})">
+      <div class="val">${v==null?"–":v.toFixed(0)+"%"}</div><div class="bar" style="height:${h}px"></div><div class="t">${mlabel(m)}</div><div class="c">${ff}/${nn}</div></div>`}).join("");
+
+  bars($("cItem"),count(ee,e=>e.t).slice(0,10));
+  bars($("cRule"),count(ee,e=>e.w));
+  bars($("cErr"),count(ee,e=>errNorm(e.e)));
+  bars($("cAct"),count(ee,e=>e.a.split(",").map(x=>x.trim()).filter(Boolean)).slice(0,6));
+
+  const last=[...ee].sort((a,b)=>b.d.localeCompare(a.d)||a.r.localeCompare(b.r));
+  $("tbody").innerHTML=last.slice(0,st.limit).map(e=>`<tr><td class="dt">${thd(e.d)}</td><td>${e.r==="M"?"เช้า":"บ่าย"}</td><td>${esc(e.i)}</td><td>${esc(e.t)}</td><td>${e.w.map(w=>`<span class="chip">${esc(w)}</span>`).join("")||"-"}</td><td>${esc(errNorm(e.e))}</td><td>${esc(e.a||"-")}</td></tr>`).join("")||'<tr><td colspan="7" class="empty">ไม่มีรายการไม่ผ่าน</td></tr>';
+  $("more").hidden=last.length<=st.limit;
+  $("more").textContent=`แสดงเพิ่ม (เหลืออีก ${Math.max(0,last.length-st.limit)} รายการ)`;
+}
+$("fMonth").onchange=$("fInst").onchange=()=>{st.limit=15;render()};
+$("fRound").querySelectorAll("button").forEach(b=>b.onclick=()=>{st.round=b.dataset.v;$("fRound").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));render()});
+$("reset").onclick=()=>{$("fMonth").value="";$("fInst").value="";st.round="";st.limit=15;$("fRound").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===""));render()};
+$("more").onclick=()=>{st.limit+=30;render()};
+$("theme").onclick=()=>{const d=document.documentElement,a=d.getAttribute("data-theme"),dark=a==="dark"||(!a&&matchMedia("(prefers-color-scheme: dark)").matches);d.setAttribute("data-theme",dark?"light":"dark")};
+render();
+</script>
+
+</body>
+</html>
