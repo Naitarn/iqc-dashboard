@@ -118,7 +118,7 @@ td.dt{white-space:nowrap;font-variant-numeric:tabular-nums}
 
 <section id="instruments">
   <h2>สถานะรายเครื่อง</h2>
-  <p class="hint">% = อัตราผ่าน QC (วันที่ไม่มีบันทึกนับเป็นผ่าน) · ใต้ตัวเลขคือรายการที่ไม่ผ่านบ่อย 3 อันดับ · กดที่การ์ดเพื่อดูเฉพาะเครื่องนั้น</p>
+  <p class="hint">% = อัตราผ่าน QC (รอบที่ผ่านทุก level ÷ รอบที่บันทึก) ·ใต้ตัวเลขคือรายการที่ไม่ผ่านบ่อย 3 อันดับ · กดที่การ์ดเพื่อดูเฉพาะเครื่องนั้น</p>
   <div class="legend"><span class="s-ok">ดี ≥ 95%</span><span class="s-warn">เฝ้าระวัง 85–94%</span><span class="s-bad">ต้องแก้ไข &lt; 85%</span></div>
   <div class="inst" id="instCards"></div>
 </section>
@@ -149,7 +149,8 @@ td.dt{white-space:nowrap;font-variant-numeric:tabular-nums}
 
 <script>
 const DATA=/*IQC_DATA*/null;
-const runs=DATA.runs, ev=DATA.ev;
+// only real form records count; days with no record are not counted as pass (x:1 rows are ignored)
+const runs=DATA.runs.filter(r=>!r.x), ev=DATA.ev;
 const INST=["CI4100 Immunology","CI4100 Chemistry","Architect C4000","CA-500 (Coag)","UC-1000 (UA)","VISION Pro A (ESR)","XN-550 (CBC)"];
 const MN=["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const $=id=>document.getElementById(id);
