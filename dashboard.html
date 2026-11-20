@@ -34,9 +34,9 @@ h2{font-size:17px;margin:0;font-weight:600}
 .summary{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;font-size:15px}
 .summary b{font-weight:600}
 .summary .dh{font-size:14px;margin-bottom:10px}
-.daygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px 18px}
+.daygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:8px 18px}
 .dst{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:14px;min-width:0}
-.dst .nm{font-weight:600;min-width:88px}
+.dst .nm{font-weight:600;min-width:150px}
 .dst .d{font-size:12px;color:var(--mut)}
 .chip.ok{background:var(--okbg);color:var(--ok)}
 .chip.na{background:var(--track);color:var(--mut)}
@@ -189,13 +189,13 @@ function dayStatus(fm,fr,fi){
   const today=real.filter(r=>r.d===day);
   const rows=(fi?[fi]:DAY_ORDER).map(i=>{
     const rs=today.filter(r=>r.s[i]!==undefined).sort((a,b)=>a.r===b.r?0:a.r==="A"?-1:1);
-    if(!rs.length)return `<div class="dst"><span class="nm">${esc(SHORT[i]||i)}</span><span class="chip na">ไม่มีบันทึก</span></div>`;
+    if(!rs.length)return `<div class="dst"><span class="nm">${esc(i)}</span><span class="chip na">ไม่มีบันทึก</span></div>`;
     const r=rs[0], rnd=r.r==="M"?"รอบเช้า":"รอบบ่าย";
-    if(r.s[i]===1)return `<div class="dst"><span class="nm">${esc(SHORT[i]||i)}</span><span class="chip ok">All pass</span><span class="d">${rnd}</span></div>`;
+    if(r.s[i]===1)return `<div class="dst"><span class="nm">${esc(i)}</span><span class="chip ok">All pass</span><span class="d">${rnd}</span></div>`;
     const evs=ev.filter(e=>e.d===day&&e.r===r.r&&e.i===i);
     const errs=[...new Set(evs.map(e=>errNorm(e.e)))].map(x=>x==="ไม่ระบุ"?"Not pass":x);
     const items=[...new Set(evs.map(e=>e.t))].slice(0,4).join(", ");
-    return `<div class="dst"><span class="nm">${esc(SHORT[i]||i)}</span>${(errs.length?errs:["Not pass"]).map(x=>`<span class="chip bad">${esc(x)}</span>`).join("")}<span class="d">${rnd}${items?" · "+esc(items):""}</span></div>`;
+    return `<div class="dst"><span class="nm">${esc(i)}</span>${(errs.length?errs:["Not pass"]).map(x=>`<span class="chip bad">${esc(x)}</span>`).join("")}<span class="d">${rnd}${items?" · "+esc(items):""}</span></div>`;
   }).join("");
   return `<div class="dh">สถานะ QC วันที่ <b>${thd(day)}</b></div><div class="daygrid">${rows}</div>`;
 }
