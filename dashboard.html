@@ -33,6 +33,13 @@ h2{font-size:17px;margin:0;font-weight:600}
 .hint{color:var(--mut);font-size:13px;margin:-8px 0 0}
 .summary{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px 18px;font-size:15px}
 .summary b{font-weight:600}
+.summary .dh{font-size:14px;margin-bottom:10px}
+.daygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px 18px}
+.dst{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:14px;min-width:0}
+.dst .nm{font-weight:600;min-width:88px}
+.dst .d{font-size:12px;color:var(--mut)}
+.chip.ok{background:var(--okbg);color:var(--ok)}
+.chip.na{background:var(--track);color:var(--mut)}
 .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 @media(max-width:640px){.kpis{grid-template-columns:minmax(0,1fr)}}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px}
@@ -47,10 +54,9 @@ h2{font-size:17px;margin:0;font-weight:600}
 .ic .pct{font:600 26px/1 var(--f-num);color:var(--st)}
 .meter{height:8px;background:var(--track);border-radius:4px;overflow:hidden}.meter i{display:block;height:100%;background:var(--st)}
 .ic .d{font-size:13px;color:var(--mut)}
-.ic .top3{margin:0;padding-left:20px;font-size:13px;display:flex;flex-direction:column;gap:2px}
-.ic .top3 li{padding-left:2px}
-.ic .top3 li span{display:inline-block;min-width:0;max-width:75%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
-.ic .top3 li b{float:right;font:500 12px var(--f-num);color:var(--mut)}
+.ic .top3{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px}
+.ic .top3 span{white-space:nowrap}
+.ic .top3 i{font-style:normal;color:var(--mut)}
 .s-ok{--st:var(--ok);--stbg:var(--okbg)}.s-warn{--st:var(--warn);--stbg:var(--warnbg)}.s-bad{--st:var(--bad);--stbg:var(--badbg)}.s-na{--st:var(--mut);--stbg:var(--track)}
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0}
 .cols{display:flex;align-items:flex-end;gap:6px;height:210px}
@@ -113,7 +119,7 @@ td.dt{white-space:nowrap;font-variant-numeric:tabular-nums}
 
 <section id="instruments">
   <h2>สถานะรายเครื่อง</h2>
-  <p class="hint">% = อัตราผ่าน QC (วันที่ไม่มีบันทึกนับเป็นผ่าน) · ใต้ตัวเลขคือรายการที่ไม่ผ่านบ่อย 3 อันดับ (จำนวนครั้ง) · กดที่การ์ดเพื่อดูเฉพาะเครื่องนั้น</p>
+  <p class="hint">% = อัตราผ่าน QC (วันที่ไม่มีบันทึกนับเป็นผ่าน) · ใต้ตัวเลขคือรายการที่ไม่ผ่านบ่อย 3 อันดับ · กดที่การ์ดเพื่อดูเฉพาะเครื่องนั้น</p>
   <div class="legend"><span class="s-ok">ดี ≥ 95%</span><span class="s-warn">เฝ้าระวัง 85–94%</span><span class="s-bad">ต้องแก้ไข &lt; 85%</span></div>
   <div class="inst" id="instCards"></div>
 </section>
@@ -128,7 +134,7 @@ td.dt{white-space:nowrap;font-variant-numeric:tabular-nums}
   <h2>สาเหตุที่ไม่ผ่าน</h2>
   <div class="three">
     <div class="card" id="cardItem"><h3>รายการที่ไม่ผ่านบ่อย</h3><div id="cItem"></div></div>
-    <div class="card" id="cardRule"><h3>Westgard rule ที่ละเมิด</h3><div id="cRule"></div></div>
+    <div class="card" id="cardRule"><h3>Westgard rule</h3><div id="cRule"></div></div>
     <div class="card" id="cardErr"><h3>ประเภทความคลาดเคลื่อน</h3><div id="cErr"></div><h3 style="margin-top:18px">การแก้ไขที่ใช้บ่อย</h3><div id="cAct"></div></div>
   </div>
 </section>
@@ -171,25 +177,28 @@ const pct=o=>o.n?(1-o.f/o.n)*100:null;
 
 function renderDQ(){
   const m=DATA.meta;if(!m)return;
-  const rl=r=>r==="M"?"เช้า":"บ่าย";
-  const issues=[];
-  (m.structure||[]).forEach(s=>issues.push(s));
-  if(m.parsed!==m.sheetRows)issues.push(`นำเข้าได้ ${m.parsed} จาก ${m.sheetRows} แถวใน Sheet`);
-  (m.unparsed||[]).forEach(s=>issues.push(s));
-  if((m.missing||[]).length)issues.push(`แถวเดิม ${m.missing.length} แถวหายไปจาก Sheet: `+m.missing.slice(0,10).map(x=>`${thd(x.d)} ${rl(x.r)}`).join(", "));
-  const notes=[];
-  if((m.lateNew||[]).length)notes.push(`มีข้อมูลย้อนหลังเข้ามาใหม่ ${m.lateNew.length} แถว (นำเข้าแล้ว): `+m.lateNew.slice(0,10).map(x=>`${thd(x.d)} ${rl(x.r)}`).join(", "));
-  if((m.changed||[]).length)notes.push(`แถวเดิม ${m.changed.length} แถวถูกแก้ไขใน Sheet (ใช้ค่าล่าสุดแล้ว): `+m.changed.slice(0,10).map(x=>`${thd(x.d)} ${rl(x.r)}`).join(", "));
-  if((m.dups||[]).length)notes.push(`บันทึกซ้ำวันและรอบเดียวกัน ${m.dups.length} ครั้ง: `+m.dups.slice(0,10).map(x=>`${thd(x.d)} ${rl(x.r)} (${x.n} ครั้ง)`).join(", "));
-  const nr=m.noRecord||[];
-  const c=issues.length?"s-bad":notes.length?"s-warn":"s-ok";
-  const head=issues.length?"ข้อมูลไม่ครบ ต้องตรวจสอบ":notes.length?"ข้อมูลครบ มีข้อสังเกต":"ข้อมูลครบถ้วน";
-  const box=$("dqBox");box.className="dq "+c;
-  box.innerHTML=`<div class="hd"><span class="pill">${head}</span><b>ตรวจความครบถ้วนของข้อมูล</b></div>
-   <div class="stats"><span>อัปเดตล่าสุด <b>${esc(m.updated)}</b></span><span>แถวใน Sheet <b>${m.sheetRows}</b></span><span>นำเข้าแดชบอร์ด <b>${m.parsed}</b></span>${m.firstRun?"<span>อัปเดตครั้งแรก ยังไม่มีรอบก่อนให้เทียบ</span>":`<span>แถวใหม่จากรอบก่อน <b>${m.newRows}</b></span>`}</div>
-   ${issues.length?`<ul>${issues.map(s=>`<li>${esc(s)}</li>`).join("")}</ul>`:""}
-   ${notes.length?`<ul>${notes.map(s=>`<li>${esc(s)}</li>`).join("")}</ul>`:""}
-   ${nr.length?`<details><summary>วันที่ไม่มีบันทึก QC ${nr.length} วัน (นับเป็นผ่านทุกเครื่อง)</summary><p>${nr.map(thd).join(", ")}</p></details>`:""}`;
+  const box=$("dqBox");box.className="dq s-na";
+  box.innerHTML=`<div class="stats"><span>อัปเดตล่าสุด <b>${esc(m.updated)}</b></span><span>นำเข้าแดชบอร์ด <b>${m.parsed}</b> รายการ</span></div>`;
+}
+const SHORT={"XN-550 (CBC)":"CBC","CA-500 (Coag)":"Coag","UC-1000 (UA)":"UA","VISION Pro A (ESR)":"ESR","Architect C4000":"C4000","CI4100 Chemistry":"Chemistry","CI4100 Immunology":"Immunology"};
+const DAY_ORDER=["XN-550 (CBC)","CA-500 (Coag)","UC-1000 (UA)","VISION Pro A (ESR)","Architect C4000","CI4100 Chemistry","CI4100 Immunology"];
+// status of each instrument on the latest recorded day (latest round that day wins)
+function dayStatus(fm,fr,fi){
+  const real=runs.filter(r=>!r.x&&(!fm||r.d.startsWith(fm))&&(!fr||r.r===fr));
+  if(!real.length)return '<span class="d">ไม่มีบันทึก QC ในช่วงที่เลือก</span>';
+  const day=real.map(r=>r.d).sort().pop();
+  const today=real.filter(r=>r.d===day);
+  const rows=(fi?[fi]:DAY_ORDER).map(i=>{
+    const rs=today.filter(r=>r.s[i]!==undefined).sort((a,b)=>a.r===b.r?0:a.r==="A"?-1:1);
+    if(!rs.length)return `<div class="dst"><span class="nm">${esc(SHORT[i]||i)}</span><span class="chip na">ไม่มีบันทึก</span></div>`;
+    const r=rs[0], rnd=r.r==="M"?"รอบเช้า":"รอบบ่าย";
+    if(r.s[i]===1)return `<div class="dst"><span class="nm">${esc(SHORT[i]||i)}</span><span class="chip ok">All pass</span><span class="d">${rnd}</span></div>`;
+    const evs=ev.filter(e=>e.d===day&&e.r===r.r&&e.i===i);
+    const errs=[...new Set(evs.map(e=>errNorm(e.e)))].map(x=>x==="ไม่ระบุ"?"Not pass":x);
+    const items=[...new Set(evs.map(e=>e.t))].slice(0,4).join(", ");
+    return `<div class="dst"><span class="nm">${esc(SHORT[i]||i)}</span>${(errs.length?errs:["Not pass"]).map(x=>`<span class="chip bad">${esc(x)}</span>`).join("")}<span class="d">${rnd}${items?" · "+esc(items):""}</span></div>`;
+  }).join("");
+  return `<div class="dh">สถานะ QC วันที่ <b>${thd(day)}</b></div><div class="daygrid">${rows}</div>`;
 }
 renderDQ();
 function render(){
@@ -201,15 +210,8 @@ function render(){
   const S=stats(rr,INST);
   const n=insts.reduce((a,i)=>a+S[i].n,0),f=insts.reduce((a,i)=>a+S[i].f,0),p=n?(1-f/n)*100:0;
 
-  // summary sentence
-  const ranked=INST.filter(i=>S[i].n).map(i=>[i,pct(S[i])]).sort((a,b)=>a[1]-b[1]);
-  const watch=ranked.filter(x=>x[1]<85);
-  const topItem=count(ee,e=>e.t)[0];
-  const scope=(fm?mlabel(fm):"ทั้งช่วงข้อมูล")+(fr?(fr==="M"?" (รอบเช้า)":" (รอบบ่าย)"):"");
-  let s=`<b>${scope}</b>: QC ผ่านทุก level <b>${p.toFixed(1)}%</b> ของรอบเครื่องทั้งหมด`;
-  if(!fi){s+= watch.length?` · เครื่องที่ต้องแก้ไข: ${watch.map(([i,v])=>`<b>${esc(i)}</b> (${v.toFixed(0)}%)`).join(", ")}`:" · ไม่มีเครื่องที่ต่ำกว่า 85%";}
-  if(topItem) s+=` · รายการที่ไม่ผ่านบ่อยที่สุดคือ <b>${esc(topItem[0])}</b> (${topItem[1]} ครั้ง)`;
-  $("summary").innerHTML=s;
+  // overview box: each instrument's status on the latest recorded day
+  $("summary").innerHTML=dayStatus(fm,fr,fi);
 
   $("kpis").innerHTML=
    `<div class="kpi ${cls(n?p:null)}"><div class="big" style="color:var(--st)">${n?p.toFixed(1)+"%":"–"}</div><div class="lb">อัตราผ่าน QC (${n-f} จาก ${n} รอบเครื่อง)</div></div>`+
@@ -222,7 +224,7 @@ function render(){
     const top3=count(ee.filter(e=>e.i===i),e=>e.t).slice(0,3);
     return `<button type="button" class="ic ${c} ${fi===i?"sel":""}" data-i="${esc(i)}" aria-pressed="${fi===i}">
       <div class="top"><span class="nm">${esc(i)}</span><span class="pct">${v==null?"–":v.toFixed(1)+"%"}</span></div>
-      ${top3.length?`<ol class="top3">${top3.map(([k,n])=>`<li><span>${esc(k)}</span><b>${n}</b></li>`).join("")}</ol>`:'<div class="d">ไม่มีรายการไม่ผ่าน</div>'}</button>`}).join("");
+      ${top3.length?`<div class="top3">${top3.map(([k],ix)=>`<span><i>${ix+1}.</i> ${esc(k)}</span>`).join("")}</div>`:'<div class="d">ไม่มีรายการไม่ผ่าน</div>'}</button>`}).join("");
   $("instCards").querySelectorAll(".ic").forEach(b=>b.onclick=()=>{$("fInst").value=($("fInst").value===b.dataset.i?"":b.dataset.i);render()});
 
   // monthly pass rate (ignores month filter so the trend stays visible)
