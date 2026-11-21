@@ -1,9 +1,9 @@
 ---
-name: notion-email-alert
+name: auto-alert
 description: Set up or change automatic email reminders for dates in a Notion database (expiry dates, RIQAS, EQA, due dates, deadlines) using Google Apps Script, with settings kept in a Notion table so they can be changed from chat. Use when the user asks to set up date/expiry reminders by email from Notion ("แจ้งเตือน exp เข้าเมลล์", "ตั้งแจ้งเตือนล่วงหน้า"), or asks to change an existing reminder's lead days, recipients, send time, categories or on/off ("เปลี่ยน EQA เป็น 10 วัน", "เพิ่มผู้รับ", "ปิดแจ้งเตือน"), or says it isn't receiving the reminder emails.
 ---
 
-# Notion → Email reminders (Apps Script)
+# Auto-Alert — Notion → Email reminders (Apps Script)
 
 The system has three parts:
 1. **Source table** in Notion: the user's calendar/database with a title, a date and a category (select).
