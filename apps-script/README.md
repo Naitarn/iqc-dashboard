@@ -1,51 +1,60 @@
-# แจ้งเตือนวัน Exp. RIQAS / EQA ทางอีเมล (Google Apps Script)
+# แจ้งเตือนวัน Exp. RIQAS / EQA ทางอีเมล (Google Apps Script + Notion)
 
-สคริปต์ `ExpiryAlert.gs` อ่านปฏิทินจาก Notion (หน้า **📅 Calendar** → database *Project Schedule Calendar*)
-แล้วส่งอีเมลแจ้งเตือนอัตโนมัติทุกเช้า (~07:00 น.) บนเซิร์ฟเวอร์ของ Google — ไม่ต้องเปิดคอมหรือเปิด Notion
+สคริปต์ `ExpiryAlert.gs` ทำงาน **ทุกชั่วโมงบนเซิร์ฟเวอร์ Google** (ไม่ต้องเปิดคอม/Notion) โดยอ่าน 2 ตารางใน Notion:
 
-| หมวดหมู่ (คอลัมน์ `หมวดหมู่`) | แจ้งล่วงหน้า |
+| ตาราง | ใช้ทำอะไร |
 |---|---|
-| RIQAS QC | 3 วันก่อน `วันที่` |
-| EQA | 7 วันก่อน `วันที่` |
+| 💭 **Lab schedule calendar** (ในแท็บ Calendar) | รายการ Exp. RIQAS / EQA และ `วันที่` |
+| ⚙️ **ตั้งค่าแจ้งเตือน Exp.** (ท้ายหน้า LAB ON TRACK) | แจ้งล่วงหน้ากี่วัน · เปิด/ปิด · อีเมลผู้รับ · เวลาส่ง |
 
-- แต่ละรายการแจ้ง **ครั้งเดียว** (รวมหลายรายการไว้ในอีเมลฉบับเดียวต่อวัน)
-- ถ้าเพิ่มรายการใหม่ใน Notion ที่เหลือไม่ถึง 3/7 วันแล้ว จะถูกแจ้งในเช้าวันถัดไป
-- ถ้าแก้วันที่ของรายการ จะถือเป็นรายการใหม่และแจ้งอีกครั้ง
+ค่าเริ่มต้น: RIQAS QC แจ้งล่วงหน้า **3 วัน**, EQA **7 วัน**, ส่งตั้งแต่ 07:00 น.
 
-## ขั้นตอนติดตั้ง (ทำครั้งเดียว ~10 นาที)
+## เปลี่ยนการตั้งค่าโดยไม่ต้องแก้โค้ด
+
+**วิธีที่ 1 — บอกในแชต Claude** (ที่เชื่อม Notion ไว้) เช่น
+- "เปลี่ยน EQA เป็นแจ้งล่วงหน้า 10 วัน"
+- "ให้ RIQAS แจ้ง 7, 3 และ 1 วันก่อน Exp."
+- "ปิดการแจ้งเตือน EQA ชั่วคราว"
+- "เพิ่มผู้รับ RIQAS อีกคน someone@example.com"
+- "ส่งตอน 9 โมงแทน"
+- "เพิ่มหมวด Other ให้แจ้งล่วงหน้า 1 วันด้วย"
+
+Claude จะไปแก้ตาราง ⚙️ ใน Notion ให้
+
+**วิธีที่ 2 — แก้ในตาราง ⚙️ ตั้งค่าแจ้งเตือน Exp. โดยตรง**
+
+| คอลัมน์ | ความหมาย |
+|---|---|
+| หมวดหมู่ | ต้องสะกดตรงกับคอลัมน์ `หมวดหมู่` ในปฏิทิน (RIQAS QC / EQA / Other) |
+| แจ้งล่วงหน้า (วัน) | ตัวเลข หรือหลายค่าคั่นด้วย `,` เช่น `7, 3, 1` (แจ้งทุกจุด) |
+| เปิดใช้งาน | ติ๊กถูก = แจ้ง |
+| อีเมลผู้รับ | หลายอีเมลคั่นด้วย `,` |
+| เวลาส่ง (โมง) | 0–23 (เวลาไทย) |
+| ผลล่าสุด | สคริปต์เขียนผลเอง เช่น "✅ 21/11/2026 07:00 ส่งแจ้งเตือน 1 รายการ" |
+
+ค่าที่แก้มีผลในรอบถัดไป (ภายใน ~1 ชั่วโมง) — แต่ละรายการแจ้งครั้งเดียวต่อ 1 จุดแจ้งเตือน
+รายการที่เพิ่มทีหลังหรือแก้จำนวนวันให้มากขึ้น จะถูกแจ้งตามทันทีในรอบถัดไป
+
+## ติดตั้ง (ครั้งเดียว ~10 นาที)
 
 ### 1) สร้าง Notion Integration
-1. ไปที่ <https://www.notion.so/profile/integrations> → **New integration**
-2. ตั้งชื่อ เช่น `Lab Expiry Alert` เลือก workspace ที่มีหน้า LAB ON TRACK, Type = **Internal** → Save
-3. Capabilities เลือกแค่ **Read content** ก็พอ
-4. คัดลอก **Internal Integration Secret** (ขึ้นต้นด้วย `ntn_...`) เก็บไว้
+1. <https://www.notion.so/profile/integrations> → **New integration** → ชื่อ `Lab Expiry Alert`, Type **Internal**
+2. Capabilities: ติ๊ก **Read content** และ **Update content** (ใช้เขียนคอลัมน์ "ผลล่าสุด")
+3. คัดลอก **Internal Integration Secret** (`ntn_...`)
 
-### 2) แชร์ database ให้ integration
-1. เปิดหน้า **📅 Calendar** ใน Notion → คลิกที่ตาราง *Project Schedule Calendar* → เปิดเป็นหน้าเต็ม
-2. มุมขวาบน `•••` → **Connections** → เพิ่ม `Lab Expiry Alert`
+### 2) เชื่อม integration กับหน้า LAB ON TRACK
+เปิดหน้า **🧪 LAB ON TRACK** → มุมขวาบน `•••` → **Connections** → เพิ่ม `Lab Expiry Alert`
+(ครอบคลุมทั้งปฏิทินและตารางตั้งค่าในหน้าเดียว)
 
 ### 3) สร้าง Apps Script
-1. ไปที่ <https://script.google.com> (ล็อกอินบัญชี Google ที่จะใช้ส่งอีเมล) → **New project**
-2. ลบโค้ดเดิม แล้ววางเนื้อหาทั้งหมดจาก `ExpiryAlert.gs` → กด 💾 Save ตั้งชื่อโปรเจกต์ เช่น `Lab Expiry Alert`
-3. ⚙️ **Project Settings** → *Time zone* เลือก `(GMT+07:00) Bangkok`
-4. ⚙️ **Project Settings** → เลื่อนลงไป **Script properties** → *Add script property* 2 ค่า:
+1. <https://script.google.com> (บัญชี Google ที่จะใช้ส่งอีเมล) → **New project**
+2. วางโค้ดทั้งหมดจาก `ExpiryAlert.gs` → 💾 Save
+3. ⚙️ **Project Settings** → Time zone `(GMT+07:00) Bangkok`
+4. ⚙️ **Project Settings** → **Script properties** → เพิ่ม `NOTION_TOKEN` = secret จากข้อ 1
 
-   | Property | Value |
-   |---|---|
-   | `NOTION_TOKEN` | secret จากข้อ 1 |
-   | `ALERT_EMAIL` | อีเมลผู้รับแจ้งเตือน |
+### 4) ทดสอบและเปิดใช้งาน (เลือกชื่อฟังก์ชันด้านบน แล้วกด ▶ Run)
+1. `showSettings` — ครั้งแรกจะขออนุญาต (Advanced → Go to … → Allow) ดู Execution log ต้องเห็นค่า RIQAS QC / EQA
+2. `testSendPreview` — ส่งอีเมล `[ทดสอบ]` รวมรายการใน 30 วันข้างหน้า
+3. `setupTrigger` — เปิดการทำงานอัตโนมัติทุกชั่วโมง (ดูได้ที่เมนู ⏰ Triggers)
 
-### 4) ทดสอบและเปิดใช้งาน
-1. กลับไปหน้า Editor เลือกฟังก์ชัน **`testSendPreview`** → ▶ Run
-   - ครั้งแรกจะขออนุญาต (Review permissions → เลือกบัญชี → Advanced → Go to … → Allow)
-   - ควรได้อีเมล `[ทดสอบ]` ที่รวมรายการ RIQAS/EQA ใน 30 วันข้างหน้า
-2. เลือกฟังก์ชัน **`setupDailyTrigger`** → ▶ Run — เสร็จแล้ว ระบบจะรันเองทุกวัน
-3. ตรวจได้ที่เมนู ⏰ **Triggers** ด้านซ้าย ต้องเห็น `checkExpiryAndNotify` — Day timer
-
-## ปรับแต่ง
-แก้ในส่วน `CONFIG` ด้านบนของไฟล์:
-- `RULES` — จำนวนวันแจ้งล่วงหน้า หรือเพิ่มหมวดหมู่อื่น (ต้องตรงกับชื่อใน Notion)
-- `SEND_HOUR` — ชั่วโมงที่ส่ง (แก้แล้วรัน `setupDailyTrigger` ใหม่)
-- เพิ่มผู้รับ: แก้ `ALERT_EMAIL` เป็น `a@x.com,b@y.com`
-
-ฟังก์ชัน `resetSentHistory` ใช้ล้างประวัติถ้าต้องการให้แจ้งรายการเดิมซ้ำ
+ฟังก์ชันอื่น: `resetSentHistory` ล้างประวัติ ถ้าต้องการให้แจ้งรายการเดิมซ้ำ
