@@ -20,6 +20,9 @@ const CONFIG = {
   SETTINGS_DATA_SOURCE: '41f904df-293c-8178-8e4a-000b477b2c28', // ⚙️ ตั้งค่าแจ้งเตือน Exp.
   NOTION_VERSION: '2025-09-03',
   TIMEZONE: 'Asia/Bangkok',
+  APP_NAME: 'LAB ON TRACK',                    // ชื่อที่แสดงในอีเมล
+  CALENDAR_NAME: 'Lab schedule calendar',      // ชื่อปฏิทินที่แสดงท้ายอีเมล
+  SETTINGS_NAME: '⚙️ ตั้งค่าแจ้งเตือน Exp.',   // ชื่อตารางตั้งค่าที่แสดงท้ายอีเมล
 
   // ชื่อคอลัมน์ในปฏิทิน
   CAL_TITLE: 'Name',
@@ -178,7 +181,7 @@ function notion_(token, method, path, body) {
   const json = JSON.parse(res.getContentText());
   if (code !== 200) {
     throw new Error('Notion API ' + code + ': ' + (json.message || res.getContentText()) +
-      '\n(ตรวจว่าเพิ่ม integration ที่หน้า LAB ON TRACK แล้ว: ••• → Connections)');
+      '\n(ตรวจว่าให้ integration เข้าถึงหน้าที่มีปฏิทินและตารางตั้งค่าแล้ว: หน้า integration → แท็บ Access)');
   }
   return json;
 }
@@ -279,16 +282,16 @@ function sendEmail_(to, items, today, prefix) {
 
   const html =
     '<div style="font-family:Tahoma,Arial,sans-serif;font-size:14px;color:#1f2937">' +
-    '<h2 style="color:#0e7490;margin:0 0 8px">LAB ON TRACK — แจ้งเตือนวันครบกำหนด</h2>' +
+    '<h2 style="color:#0e7490;margin:0 0 8px">' + esc_(CONFIG.APP_NAME) + ' — แจ้งเตือนวันครบกำหนด</h2>' +
     '<p style="margin:0 0 16px">ข้อมูล ณ วันที่ ' + thaiDate_(today) + '</p>' + sections +
     '<p style="color:#6b7280;font-size:12px;margin-top:24px">ส่งอัตโนมัติจาก Google Apps Script ' +
-    'โดยอ่านข้อมูลจาก Notion › Lab schedule calendar · ปรับจำนวนวันได้ที่ตาราง ⚙️ ตั้งค่าแจ้งเตือน Exp.</p></div>';
+    'โดยอ่านข้อมูลจาก Notion › ' + esc_(CONFIG.CALENDAR_NAME) + ' · ปรับจำนวนวันได้ที่ตาราง ' + esc_(CONFIG.SETTINGS_NAME) + '</p></div>';
 
   const text = items.map(function (i) {
     return '- [' + i.category + '] ' + i.title + ' — ' + thaiDate_(i.date) + ' (' + daysText_(i.daysLeft) + ')';
   }).join('\n');
 
-  MailApp.sendEmail({ to: to, subject: subject, body: 'แจ้งเตือนวันครบกำหนด\n\n' + text, htmlBody: html, name: 'LAB ON TRACK' });
+  MailApp.sendEmail({ to: to, subject: subject, body: 'แจ้งเตือนวันครบกำหนด\n\n' + text, htmlBody: html, name: CONFIG.APP_NAME });
 }
 
 function section_(heading, list) {
